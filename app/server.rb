@@ -1,6 +1,6 @@
 require "socket"
 
-class RedisServer
+class YourRedisServer
   def initialize(port)
     @port = port
   end
@@ -8,15 +8,25 @@ class RedisServer
   def start
     server = TCPServer.new(@port)
     loop do
-      Thread.start(server.accept) do |client_socket|
-        while request = client_socket.gets
-          puts "Received request: #{request}"
-          client_socket.puts "+PING\r\n"
+      Thread.start(server.accept) do |client_socket, client_address|
+        begin
+          while request = client_socket.gets
+            puts "Received request: #{request}"
+            if request.chomp == "PING"
+              client_socket.puts "+PONG\r\n"
+            end
+          end
+        rescue Errno::ECONNRESET
+          puts "Connection reset by peer"
+        rescue => e
+          puts "An error occurred: #{e.message}"
+        ensure
+          client_socket.close
+          puts "Client connection closed"
         end
-        client_socket.close
       end
     end
   end
 end
 
-RedisServer.new(6379).start
+YourRedisServer.new(6379).start
