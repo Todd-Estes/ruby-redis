@@ -119,7 +119,8 @@
 
 # YourRedisServer.new(6379).start
 require "socket"
-require "pry"
+require_relative "store_object"
+
 class YourRedisServer
   def initialize(port)
     @server = TCPServer.new(port)
@@ -170,17 +171,18 @@ class YourRedisServer
 
   def process_request(request_parts, client)
     command = request_parts[0]
-    case command
+    case command.upcase
     when "PING"
       client.puts("+PONG\r\n")
     when "SET"
-      key, value = request_parts[1], request_parts[2]
-      @data_store[key] = value
+      key, value, px = request_parts[1], request_parts[2], request_parts[4]
+      @data_store[key] = StoreObject.new(value = value, px = px)
       client.puts "+OK\r\n"
     when "GET"
       key = request_parts[1]
-      value = @data_store[key]
-      if value
+      store_object = @data_store[key]
+      if store_object && store_object.current?
+        value = store_object.value
         client.puts "$#{value.bytesize}\r\n#{value}\r\n"
       else
         client.puts "$-1\r\n"
