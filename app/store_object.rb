@@ -2,19 +2,19 @@ class StoreObject
   attr_reader :value, :px, :created_at
   def initialize(value, px = nil)
     @value = value
-    @px = px.to_i
+    @px = px
     @created_at = current_time
   end
 
-  def is_expired?
-    (Time.now.to_f * 1000).to_i >= expiration
+  def current?
+    if @px
+      current_time <= (@created_at + @px.to_i)
+    else
+      true
+    end
   end
 
   private
-
-  def expiration
-    @created_at + @px
-  end
 
   def current_time
     (Time.now.to_f * 1000).to_i
