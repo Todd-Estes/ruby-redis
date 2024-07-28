@@ -120,6 +120,7 @@
 # YourRedisServer.new(6379).start
 require "socket"
 require_relative "store_object"
+require 'optparse'
 
 class YourRedisServer
   def initialize(port)
@@ -130,6 +131,7 @@ class YourRedisServer
   def start
     loop do
       client = @server.accept
+      # refactore client handling into separate class
       handle_client(client)
     end
   end
@@ -169,6 +171,7 @@ class YourRedisServer
     bulk_string
   end
 
+  # refactor commands into separate class(es)
   def process_request(request_parts, client)
     command = request_parts[0]
     case command.upcase
@@ -200,4 +203,13 @@ class YourRedisServer
   end
 end
 
-YourRedisServer.new(6379).start
+# refactor into separates class
+options = {port: 6379}
+parser = OptionParser.new do |opts|
+  opts.on("-p [N]", "--[no-]port [N]", /^\d{1,5}$/, "Specified Port Number") do |v|
+     v ? options[:port] = v.to_i : options[:port] = 6329
+  end
+end.parse!(into: options)
+
+YourRedisServer.new(options[:port]).start
+
