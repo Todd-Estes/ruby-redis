@@ -175,6 +175,7 @@ class YourRedisServer
   def process_request(request_parts, client)
     command = request_parts[0]
     case command.upcase
+ 
     when "PING"
       client.puts("+PONG\r\n")
     when "ECHO"
@@ -193,9 +194,18 @@ class YourRedisServer
       store_object = @data_store[key]
       if store_object && store_object.current?
         value = store_object.value
+        puts value
         client.puts "$#{value.bytesize}\r\n#{value}\r\n"
       else
         client.puts "$-1\r\n"
+      end
+    when "INFO"
+      section = request_parts[1]
+      if section == "replication"
+        key_value_pair = "role:master"
+        client.puts "$#{key_value_pair.bytesize}\r\n#{key_value_pair}\r\n"
+      else
+        client.puts "-ERR unknown argument for 'info' command\r\n\r\n"
       end
     else
       client.puts "-ERR unknown command '#{command}'\r\n"
