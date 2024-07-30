@@ -119,20 +119,23 @@
 
 # YourRedisServer.new(6379).start
 require "socket"
-require_relative "store_object"
 require 'optparse'
+require_relative "store_object"
+require_relative 'server_info_stats'
 
 class YourRedisServer
-  def initialize(port)
-    @server = TCPServer.new(port)
+  def initialize(options)
+    @server = TCPServer.new(options[:port])
     @data_store = {}
+    #@info_stats needs to be a separate class
+    @info_stats = ServerInfoStats.new(options)
   end
 
   def start
     loop do
-      client = @server.accept
-      # refactore client handling into separate class
-      handle_client(client)
+      Thread.start(@server.accept) do |client|
+        handle_client(client)
+      end
     end
   end
 
@@ -171,11 +174,20 @@ class YourRedisServer
     bulk_string
   end
 
-  # refactor commands into separate class(es)
   def process_request(request_parts, client)
     command = request_parts[0]
+
     case command.upcase
- 
+    when "INFO"
+      section = request_parts[1]
+      if section == "replication"
+        pair = "role:#{@info_stats.get_role}"
+        response =  "$#{pair.bytesize}\r\n#{pair}\r\n"
+        puts response.inspect
+        client.puts response
+      else
+        client.puts "-ERR unknown argument for 'info' command\r\n\r\n"
+      end
     when "PING"
       client.puts("+PONG\r\n")
     when "ECHO"
@@ -194,18 +206,9 @@ class YourRedisServer
       store_object = @data_store[key]
       if store_object && store_object.current?
         value = store_object.value
-        puts value
         client.puts "$#{value.bytesize}\r\n#{value}\r\n"
       else
         client.puts "$-1\r\n"
-      end
-    when "INFO"
-      section = request_parts[1]
-      if section == "replication"
-        key_value_pair = "role:master"
-        client.puts "$#{key_value_pair.bytesize}\r\n#{key_value_pair}\r\n"
-      else
-        client.puts "-ERR unknown argument for 'info' command\r\n\r\n"
       end
     else
       client.puts "-ERR unknown command '#{command}'\r\n"
@@ -213,13 +216,21 @@ class YourRedisServer
   end
 end
 
-# refactor into separates class
-options = {port: 6379}
-parser = OptionParser.new do |opts|
+# refactor into separate class(or service) / look and using dotenv
+# options = {
+#   "port": 6379,
+#   "role": "master",
+# }
+options = {}
+OptionParser.new do |opts|
   opts.on("-p [N]", "--[no-]port [N]", /^\d{1,5}$/, "Specified Port Number") do |v|
-     v ? options[:port] = v.to_i : options[:port] = 6329
+     v ? v.to_i : 6329
   end
-end.parse!(into: options)
+  # tune this up (argument formatting)
+   opts.on("-r [S]", "--[no-]replicaof [S]", "Specified Master Host and Port Number") do |v|
+     v ? "slave" : "master"
+  end
 
-YourRedisServer.new(options[:port]).start
+end.parse!(into: options)
+YourRedisServer.new(options).start
 
