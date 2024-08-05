@@ -180,8 +180,12 @@ class YourRedisServer
     when "INFO"
       section = request_parts[1]
       if section == "replication"
-        pair = "#role:#{@info_stats.get_role}"
-        response = "$#{pair.bytesize}\r\n#{pair}\r\n"
+        role_pair = "#role:#{@info_stats.get_role}"
+        master_replid_pair = "#master_replid:#{@info_stats.get_master_replid}"
+        master_repl_offset = "#master_repl_offset:#{@info_stats.get_master_repl_offset}"
+        pairs = role_pair + master_replid_pair + master_repl_offset
+        pairs_size = pairs.bytesize
+        response = "$#{pairs_size}\r\n#{pairs}\r\n"
         puts response.inspect
         client.puts response
       else
@@ -224,7 +228,6 @@ OptionParser.new do |opts|
    opts.on("-r [S]", "--[no-]replicaof [S]", "Specified Master Host and Port Number") do |v|
      v ? options[:role] = "slave" : options[:role] = "master"
   end
-
 end.parse!(into: options)
 p "Print options #{options}"
 YourRedisServer.new(options).start
