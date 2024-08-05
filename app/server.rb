@@ -118,16 +118,15 @@
 # end
 
 # YourRedisServer.new(6379).start
-require "socket"
+require 'socket'
 require 'optparse'
-require_relative "store_object"
+require_relative 'store_object'
 require_relative 'server_info_stats'
 
 class YourRedisServer
   def initialize(options)
     @server = TCPServer.new(options[:port])
     @data_store = {}
-    #@info_stats needs to be a separate class
     @info_stats = ServerInfoStats.new(options)
   end
 
@@ -181,8 +180,8 @@ class YourRedisServer
     when "INFO"
       section = request_parts[1]
       if section == "replication"
-        pair = "role:#{@info_stats.get_role}"
-        response =  "$#{pair.bytesize}\r\n#{pair}\r\n"
+        pair = "#role:#{@info_stats.get_role}"
+        response = "$#{pair.bytesize}\r\n#{pair}\r\n"
         puts response.inspect
         client.puts response
       else
@@ -216,21 +215,17 @@ class YourRedisServer
   end
 end
 
-# refactor into separate class(or service) / look and using dotenv
-# options = {
-#   "port": 6379,
-#   "role": "master",
-# }
-options = {}
+options = {port: 6379}
 OptionParser.new do |opts|
   opts.on("-p [N]", "--[no-]port [N]", /^\d{1,5}$/, "Specified Port Number") do |v|
-     v ? v.to_i : 6329
+     v ? v.to_i : 6379
   end
   # tune this up (argument formatting)
    opts.on("-r [S]", "--[no-]replicaof [S]", "Specified Master Host and Port Number") do |v|
-     v ? "slave" : "master"
+     v ? options[:role] = "slave" : options[:role] = "master"
   end
 
 end.parse!(into: options)
+p "Print options #{options}"
 YourRedisServer.new(options).start
 
