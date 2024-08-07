@@ -5,6 +5,7 @@ class ServerInfoStats
     @role = options[:role]
     @master_replid = nil
     @master_repl_offset = "0"
+    @rdb = ["524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"].pack('H*')
   end
 
   def get_role
@@ -18,6 +19,10 @@ class ServerInfoStats
   def get_master_repl_offset
     @master_repl_offset
   end    
+
+  def get_rdb
+    @rdb
+  end
 
   private
 
