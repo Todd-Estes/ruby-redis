@@ -120,6 +120,7 @@
 # YourRedisServer.new(6379).start
 require 'socket'
 require 'optparse'
+require 'timeout'
 require_relative 'store_object'
 require_relative 'server_info_stats'
 
@@ -128,11 +129,49 @@ class YourRedisServer
     @server = TCPServer.new(options[:port])
     @data_store = {}
     @info_stats = ServerInfoStats.new(options)
+    @master_host = options[:master_host]
+    @master_port = options[:master_port]
+    if @master_host && @master_port
+      create_handshake
+    end
+  end
+  
+  def create_handshake
+    connection = TCPSocket.new(@master_host, @master_port)
+    connection.puts("*1\r\n$4\r\nPING\r\n")
+
+    response = nil
+    begin
+      Timeout.timeout(5) do
+        response = connection.recv(1024)
+      end
+    rescue Timeout::Error
+      puts "Timeout waiting for response from master" 
+    end
+
+    if response
+      puts "received initial REPLCONF response: #{response.strip}"
+      connection.puts("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n")
+      response = connection.recv(1024)
+      connection.puts("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
+      response = connection.recv(1024)
+      puts "received second REPLCONF response: #{response.strip}"
+      connection.puts("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n")
+      response = connection.recv(1024)
+    else
+      puts "no response received from master"
+    end
+
+    connection.close
+    # connection.puts("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n")
+  rescue Errno::ECONNREFUSED => e
+    puts "Master not available: #{e.message}"
   end
 
   def start
     loop do
       Thread.start(@server.accept) do |client|
+        # create_handshake if @master_host && @master_port
         handle_client(client)
       end
     end
@@ -141,6 +180,7 @@ class YourRedisServer
   def handle_client(client)
     loop do
       request = client.gets
+      puts "Response from Master server #{request}"
       break if request.nil?
 
       request_parts = parse_request(request, client)
@@ -177,7 +217,7 @@ class YourRedisServer
     command = request_parts[0]
 
     case command.upcase
-    when "INFO"
+     when "INFO"
       section = request_parts[1]
       if section == "replication"
         role_pair = "#role:#{@info_stats.get_role}"
@@ -226,9 +266,20 @@ OptionParser.new do |opts|
   end
   # tune this up (argument formatting)
    opts.on("-r [S]", "--[no-]replicaof [S]", "Specified Master Host and Port Number") do |v|
-     v ? options[:role] = "slave" : options[:role] = "master"
+    p "v #{v}"
+    #  v ? options[:role] = "slave" : options[:role] = "master"
+     if v
+      options[:role] = "slave"
+      master_host, master_port = v.split(" ")
+      options[:master_host] = master_host 
+      options[:master_port] = master_port
+     else
+      options[:role] = "master"
+     end
   end
+p "Options #{options}"
 end.parse!(into: options)
 p "Print options #{options}"
-YourRedisServer.new(options).start
+p "Print :role option #{options[:role]}"
 
+YourRedisServer.new(options).start
