@@ -199,7 +199,9 @@ class YourRedisServer
         client.puts "-ERR wrong number of arguments for 'echo' command\r\n\r\n"
       else
         client.puts "$#{message.bytesize}\r\n#{message}\r\n"
-      end
+      end 
+    when "REPLCONF"
+      client.puts "+OK\r\n"
     when "SET"
       key, value, px = request_parts[1], request_parts[2], request_parts[4]
       @data_store[key] = StoreObject.new(value = value, px = px)
