@@ -156,6 +156,8 @@ class YourRedisServer
       connection.puts("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n")
       response = connection.recv(1024)
       puts "received second REPLCONF response: #{response.strip}"
+      connection.puts("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n")
+      response = connection.recv(1024)
     else
       puts "no response received from master"
     end
