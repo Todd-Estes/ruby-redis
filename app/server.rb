@@ -199,7 +199,11 @@ class YourRedisServer
         client.puts "-ERR wrong number of arguments for 'echo' command\r\n\r\n"
       else
         client.puts "$#{message.bytesize}\r\n#{message}\r\n"
-      end 
+      end
+    when "PSYNC"
+      repl_id = @info_stats.get_master_replid
+      repl_offset = @info_stats.get_master_repl_offset
+      client.puts "+FULLRESYNC #{repl_id} #{repl_offset}\r\n"
     when "REPLCONF"
       client.puts "+OK\r\n"
     when "SET"
