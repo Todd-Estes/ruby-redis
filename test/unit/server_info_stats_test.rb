@@ -15,4 +15,8 @@ class ServerInfoStatsTest < Minitest::Test
   def test_it_gets_role
     assert_equal "slave", @stats1.get_role
   end
+
+  def test_it_gets_a_non_nil_master_repl_id
+    refute_nil @stats1.get_master_replid
+  end
 end
