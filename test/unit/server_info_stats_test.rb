@@ -19,4 +19,8 @@ class ServerInfoStatsTest < Minitest::Test
   def test_it_gets_a_non_nil_master_repl_id
     refute_nil @stats1.get_master_replid
   end
+
+  def test_it_gets_master_repl_offset
+    assert_equal "0", @stats.get_master_repl_offset
+  end
 end
