@@ -204,8 +204,8 @@ class YourRedisServer
       repl_id = @info_stats.get_master_replid
       repl_offset = @info_stats.get_master_repl_offset
       client.puts "+FULLRESYNC #{repl_id} #{repl_offset}\r\n"
-      #get and send empty rdb
-      rdb_content = @info_stats.get_rdb
+      
+      rdb_content = @info_stats.get_rdb #get and send empty rdb
       rdb_length = rdb_content.length
       client.write "$#{rdb_length}\r\n#{rdb_content}"
     when "REPLCONF"
