@@ -4,8 +4,10 @@ require "./app/server_info_stats"
 
 class ServerInfoStatsTest < Minitest::Test 
   def setup
-    options = {:role => "slave"}
-    @stats1 = ServerInfoStats.new(options)
+    options1 = {:role => "slave"}
+    options2 = {:role => nil}
+    @stats1 = ServerInfoStats.new(options1)
+    @stats2 = ServerInfoStats.new(options2)
   end
 
   def test_it_exists
@@ -14,6 +16,10 @@ class ServerInfoStatsTest < Minitest::Test
 
   def test_it_gets_role
     assert_equal "slave", @stats1.get_role
+  end
+
+  def test_it_gets_master_for_role_if_attribute_is_nil
+    assert_equal "master", @stats2.get_role
   end
 
   def test_it_gets_a_non_nil_master_repl_id
